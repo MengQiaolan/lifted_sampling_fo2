@@ -366,21 +366,22 @@ class OptimizedCellGraph(CellGraph):
                 (self.cliques[l][0], self.cliques[l][1]))
             thesum = (
                 (r ** MultinomialCoefficients.comb(nhat, 2)) *
-                self.get_d_term(l, 1, len(self.cliques[l]), nhat)
+                self.get_d_term(l, nhat)
             )
         return thesum
 
     @functools.lru_cache(maxsize=None)
-    def get_d_term(self, l: int, cur: int, maxi: int, n: int) -> RingElement:
+    def get_d_term(self, l: int, n: int, cur: int = 0) -> RingElement:
+        clique_size = len(self.cliques[l])
         r = self.get_two_table_weight((self.cliques[l][0], self.cliques[l][1]))
         s = self.get_two_table_weight((self.cliques[l][0], self.cliques[l][0]))
-        if cur == maxi:
+        if cur == clique_size - 1:
             ret = (s / r) ** MultinomialCoefficients.comb(n, 2)
         else:
             ret = 0
             for ni in range(n + 1):
                 mult = MultinomialCoefficients.comb(n, ni)
                 mult = mult * ((s / r) ** MultinomialCoefficients.comb(ni, 2))
-                mult = mult * self.get_d_term(l, cur + 1, maxi, n - ni)
+                mult = mult * self.get_d_term(l, n - ni, cur + 1)
                 ret = ret + mult
         return ret
