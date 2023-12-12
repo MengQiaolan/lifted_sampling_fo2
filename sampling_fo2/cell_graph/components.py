@@ -81,7 +81,10 @@ class Cell(object):
 
     def __repr__(self):
         return self.__str__()
-
+    
+    def to_formula(self):
+        evidences: frozenset[AtomicFormula] = self.get_evidences(X)
+        return functools.reduce(lambda a, b: a & b, evidences)
 
 class TwoTable(object):
     def __init__(self, models: dict[frozenset[AtomicFormula], RingElement],

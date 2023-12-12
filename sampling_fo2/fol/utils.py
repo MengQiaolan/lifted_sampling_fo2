@@ -1,6 +1,7 @@
 from __future__ import annotations
 from functools import reduce
 import math
+from typing import Callable
 from collections import defaultdict
 from .syntax import *
 
@@ -48,7 +49,7 @@ def pad_vars(vars: frozenset[Var], arity: int) -> frozenset[Var]:
 
 def exactly_one_qf(preds: list[Pred]) -> QFFormula:
     if len(preds) == 1:
-        return top
+        return preds[0](X)
     lits = [p(X) for p in preds]
     # p1(x) v p2(x) v ... v pm(x)
     formula = reduce(lambda x, y: x | y, lits)
@@ -106,3 +107,26 @@ def convert_counting_formula(formula: QuantifiedFormula, domain: set[Const]):
     cardinality_constraint = (aux_pred, ('=', len(domain) * count_param))
 
     return uni_formula, ext_formulas, cardinality_constraint, repeat_factor
+
+
+def quantified_formula_update(quantified_formula: QuantifiedFormula, 
+                              free_formula: QFFormula,
+                              op: Callable[[QFFormula, QFFormula], QFFormula]):
+    formula = quantified_formula
+    quantifier_num = 0
+    quantifier_var = [X, Y]
+    
+    while isinstance(formula, QuantifiedFormula):
+        quantifier_num += 1
+        formula = formula.quantified_formula
+    
+    formula = op(formula, free_formula)
+    # formula = formula & free_formula
+    
+    while quantifier_num != 0:
+        formula = QuantifiedFormula(
+            Universal(quantifier_var[quantifier_num-1]), formula)
+        quantifier_num -= 1  
+    
+    return formula
+    

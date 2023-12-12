@@ -1,0 +1,16 @@
+\forall X: (
+    \forall Y: (
+        (E(X,Y) -> E(Y,X))
+        & (I1(X) & I1(Y) -> ~E(Y,X))
+        & (I1(X) & I2(Y) -> ~E(Y,X))
+    )
+) 
+&
+\forall X: (
+    (I1(X) | I2(X) | NI(X))
+    & (I1(X) -> ~I2(X) & ~NI(X))
+    & (I2(X) -> ~I1(X) & ~NI(X))
+    & (NI(X) -> ~I1(X) & ~I2(X))
+)
+
+V = 3

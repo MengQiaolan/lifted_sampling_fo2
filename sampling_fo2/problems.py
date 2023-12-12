@@ -23,6 +23,13 @@ class WFOMCSProblem(object):
         self.sentence: SC2 = sentence
         self.weights: dict[Pred, tuple[Rational, Rational]] = weights
         self.cardinality_constraint: CardinalityConstraint = cardinality_constraint
+    
+    def __str__(self) -> str:
+        return f'WFOMCSProblem(\n'\
+                f'\t sentence={self.sentence.__str__()},\n'\
+                f'\t domain={self.domain},\n'\
+                f'\t weights={self.weights},\n'\
+                f'\t cardinality_constraint={self.cardinality_constraint})'
 
 
 class MLNProblem(object):

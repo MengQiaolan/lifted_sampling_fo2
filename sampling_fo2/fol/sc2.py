@@ -43,7 +43,7 @@ class SC2(Formula):
     def __str__(self) -> str:
         s = ''
         if self.uni_formula is not None:
-            s += f'Universally quantified formula: {self.uni_formula}'
+            s += f'Universally quantified formula:\n {self.uni_formula}'
         if self.ext_formulas:
             s += '\nExistentially quantified formulas:\n'
             s += '\n'.join(map(str, self.ext_formulas))

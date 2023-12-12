@@ -1,7 +1,7 @@
 from __future__ import annotations
+from copy import deepcopy
 
 import random
-import numpy as np
 import argparse
 import os
 import logzero
@@ -16,72 +16,130 @@ from collections import defaultdict
 from sampling_fo2.context import WFOMSContext
 from sampling_fo2.context.existential_context import \
     BlockType, ExistentialContext, ExistentialTwoTable
-from sampling_fo2.fol.syntax import AtomicFormula, Const, a, b, \
-    AUXILIARY_PRED_NAME, PREDS_FOR_EXISTENTIAL
+from sampling_fo2.fol.syntax import AtomicFormula, Const, a, b, X, Y, \
+    AUXILIARY_PRED_NAME, PREDS_FOR_EXISTENTIAL, \
+    QuantifiedFormula, Universal, QFFormula
+from sampling_fo2.fol.utils import quantified_formula_update
 from sampling_fo2.utils import MultinomialCoefficients, multinomial, \
     Rational, RingElement, coeff_monomial, round_rational, expand
 from sampling_fo2.parser import parse_input
-from sampling_fo2.cell_graph import Cell, CellGraph
+from sampling_fo2.cell_graph import Cell, CellGraph, build_cells_from_formula
 from sampling_fo2.utils.polynomial import choices
 
+from sampling_fo2.problems import WFOMCSProblem
+
 from sampling_fo2.wfomc import get_config_weight_standard_faster, \
-    get_config_weight_standard
+    get_config_weight_standard, count_distribution
 
 
 class Sampler(object):
     def __init__(self, context: WFOMSContext):
         self.context: WFOMSContext = context
         get_weight = self.context.get_weight
-
         self.domain: list[Const] = list(self.context.domain)
         self.domain_size: int = len(self.domain)
         logger.debug('domain: %s', self.domain)
+        
         self.cell_graph: CellGraph = CellGraph(
-            self.context.formula, get_weight
+            self.context.uni_formula, get_weight
         )
-        MultinomialCoefficients.setup(self.domain_size)
-        self.configs, self.weights = self._get_config_weights(
-            self.cell_graph, self.domain_size)
 
-        if self.context.contain_existential_quantifier():
-            # Precomputed weights for cell configs
-            self.uni_cell_graph: CellGraph = CellGraph(
-                self.context.uni_formula, get_weight
-            )
-            # self.uni_cell_graph.show()
-            self.configs, self.weights = self._adjust_config_weights(
-                self.configs, self.weights,
-                self.cell_graph, self.uni_cell_graph
-            )
-            self.cell_graph = self.uni_cell_graph
+        # print("================= 0 ====================")
+        # print(self.context.formula)
+        # print(self.context.uni_formula)
+        # print(self.context.sentence.uni_formula)
+        # print(self.context.block_encoded_formula)
+        
+        
+        # FIXME
+        # 去掉这个formula？因为他只是为了计算uni config临时用的formula？
+        # 现在用 count dis 来计算就不用了
+        self.context.formula = None
+
+        # sentence.uni_formula: 最开始的 uni_formula
+        # context.uni_formula: 处理之后的 uni_formula（加入了aux pred，但是没有skl）
+        # context.formula: 包含了skl的formula
+        # context.block_encoded_formula: block encoded 之后的 formula(和context.formula没有半毛钱关系)
+        
+        # print("++++++++++++")
+        # print(self.context.sentence.ext_formulas)
+        # print(self.context.sentence.uni_formula)
+        # print(self.context.uni_formula)
+        
+        self.context.sentence.uni_formula = \
+            quantified_formula_update(self.context.sentence.uni_formula, 
+                                      self.context.uni_formula,
+                                      op = lambda x, y: x & y)
+
+        problem = WFOMCSProblem(sentence=self.context.sentence,
+                                domain=self.context.domain,
+                                weights={},
+                                cardinality_constraint=self.context.cardinality_constraint)
+        self.cells = self.cell_graph.cells
+        count_dist = count_distribution(problem=problem,
+                                        cells=self.cells)
+        self.configs = list(count_dist.keys())
+        self.weights = list(count_dist.values())
+        
         wfomc = sum(self.weights)
         if wfomc == 0:
             raise RuntimeError(
                 'Unsatisfiable formula!!'
             )
-        round_val = round_rational(wfomc)
-        logger.info('wfomc (round):%s (exp(%s))',
-                    round_val, round_val.ln())
-        logger.debug('Configuration weight (round): %s', list(zip(self.configs, [
-            round_rational(w) for w in self.weights
-        ])))
-        self.cells = self.cell_graph.get_cells()
+        # round_val = round_rational(wfomc)
+        # logger.info('wfomc (round):%s (exp(%s))',
+        #             round_val, round_val.ln())
+        # logger.debug('Configuration weight (round): %s', list(zip(self.configs, [
+        #     round_rational(w) for w in self.weights
+        # ])))
 
         if self.context.contain_existential_quantifier():
-            self.block_cell_graph: CellGraph = CellGraph(
-                self.context.block_encoded_formula, get_weight
-            )
             # Precomputed weights for cell + block configuration
             # NOTE: here the cell + block is the `CELL` in the sampling paper
+            self.block_cell_graph: CellGraph = CellGraph(
+                self.context.block_encoded_formula_2, get_weight
+            )
+            
+            cell_block_list = []
+            for cell in self.block_cell_graph.cells:
+                config = []
+                for domain_pred, block_type in context.blockpred_to_blocktype.items():
+                    if cell.is_positive(domain_pred):
+                        config.append((
+                            cell.drop_preds(prefixes=PREDS_FOR_EXISTENTIAL),
+                            block_type
+                        ))
+                cell_block_list.append(config)
+            # logger.info("CELLs: %s", cell_block_list)
+            
+            self.context.sentence.uni_formula = self.context.block_encoded_formula_2
+            self.context.sentence.ext_formulas = self.context.ext_formulas_for_block
+            problem = WFOMCSProblem(sentence=self.context.sentence,
+                                domain=self.context.domain,
+                                weights={},
+                                cardinality_constraint=self.context.cardinality_constraint)
+            
             self.cb_weights: dict[
                 frozenset[tuple[Cell, BlockType, int]], RingElement
             ] = dict()
-            logger.info('Pre-compute the weights for existential quantifiers')
-            for n in range(1, self.domain_size):
-                self.cb_weights.update(
-                    self._precompute_cb_weight(
-                        self.block_cell_graph, n, self.context)
+            tmp_cb_weight = count_distribution(
+                                    problem=deepcopy(problem),
+                                    cells=self.block_cell_graph.cells,
+                                    domain_sizes=list(reversed(range(1, self.domain_size))))
+            
+            for partition in tmp_cb_weight.keys():
+                cb_config = defaultdict(lambda: 0)
+                for idx, n in enumerate(partition):
+                    for config in cell_block_list[idx]:
+                        cb_config[config] += n
+                cb_config = dict(
+                    (k, v) for k, v in cb_config.items() if v > 0
                 )
+                dup_factor = Rational(MultinomialCoefficients.coef(partition), 1)
+                self.cb_weights[
+                    frozenset((*k, v) for k, v in cb_config.items())
+                ] = tmp_cb_weight[partition]/dup_factor
+
             logger.debug('pre-computed weights for existential quantifiers:\n%s',
                          self.cb_weights)
 
@@ -89,70 +147,6 @@ class Sampler(object):
         self.t_sampling = 0
         self.t_assigning = 0
         self.t_sampling_models = 0
-
-    def _precompute_cb_weight(self, cell_graph: CellGraph, domain_size: int,
-                              context: WFOMSContext) \
-            -> dict[frozenset[tuple[Cell, BlockType, int]], RingElement]:
-        cb_weights = defaultdict(lambda: Rational(0, 1))
-        cells = cell_graph.get_cells()
-        # cell + block configuration, i.e., the `CELL` configuration in
-        # the sampling paper
-        cb_configs = []
-        for cell in cells:
-            config = []
-            for domain_pred, block_type in context.blockpred_to_blocktype.items():
-                if cell.is_positive(domain_pred):
-                    config.append((
-                        cell.drop_preds(prefixes=PREDS_FOR_EXISTENTIAL),
-                        block_type
-                    ))
-            cb_configs.append(config)
-
-        cell_weights, edge_weights = cell_graph.get_all_weights()
-
-        for partition in multinomial(len(cells), domain_size):
-            res = get_config_weight_standard_faster(
-                partition, cell_weights, edge_weights
-            )
-            cb_config = defaultdict(lambda: 0)
-            for idx, n in enumerate(partition):
-                for config in cb_configs[idx]:
-                    cb_config[config] += n
-            cb_config = dict(
-                (k, v) for k, v in cb_config.items() if v > 0
-            )
-            cb_weights[
-                frozenset((*k, v) for k, v in cb_config.items())
-            ] += (Rational(MultinomialCoefficients.coef(partition), 1) * res)
-        # remove duplications
-        for cb_config in cb_weights.keys():
-            dup_factor = Rational(MultinomialCoefficients.coef(
-                tuple(c[2] for c in cb_config)
-            ), 1)
-            cb_weights[cb_config] /= dup_factor
-        return cb_weights
-
-    def _adjust_config_weights(self, configs: list[tuple[int, ...]],
-                               weights: list[RingElement],
-                               src_cell_graph: CellGraph,
-                               dest_cell_graph: CellGraph) -> \
-            tuple[list[tuple[int, ...]], list[Rational]]:
-        src_cells = src_cell_graph.get_cells()
-        dest_cells = dest_cell_graph.get_cells()
-        mapping_mat = np.zeros(
-            (len(src_cells), len(dest_cells)), dtype=np.int32)
-        for idx, cell in enumerate(src_cells):
-            dest_idx = dest_cells.index(
-                cell.drop_preds(prefixes=PREDS_FOR_EXISTENTIAL)
-            )
-            mapping_mat[idx, dest_idx] = 1
-
-        adjusted_config_weight = defaultdict(lambda: Rational(0, 1))
-        for config, weight in zip(configs, weights):
-            adjusted_config_weight[tuple(np.dot(
-                config, mapping_mat).tolist())] += weight
-        return list(adjusted_config_weight.keys()), \
-            list(adjusted_config_weight.values())
 
     def _sample_ext_evidences(self, cell_assignment: list[Cell],
                               cell_weight: RingElement) \
@@ -219,7 +213,8 @@ class Sampler(object):
                         )
 
                 reduced_cb_config = ext_config.reduce_cb_config(etable_config)
-                reduced_weight = self.cb_weights[reduced_cb_config]
+                reduced_weight = self.cb_weights[reduced_cb_config] if \
+                    reduced_cb_config in self.cb_weights else 0
                 # print(q, total_weight_ebtype, utype_weight, coeff,
                 #       reduced_weight)
                 # print(expand(q * total_weight_ebtype * utype_weight * coeff *
@@ -431,7 +426,7 @@ class Sampler(object):
         cell_assignment = list()
         w = Rational(1, 1)
         for cell, n in config.items():
-            for _ in range(n):
+            for _ in range(int(n)):
                 cell_assignment.append(cell)
                 w = w * cell_graph.get_cell_weight(cell)
         return cell_assignment, w

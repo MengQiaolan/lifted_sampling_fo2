@@ -4,6 +4,6 @@
 \forall X: (\exists Y: (F1(X,Y))) &
 \forall X: (\exists Y: (F2(X,Y)))
 
-domain = 5
-|F1| = 5
-|F2| = 5
+domain = 10
+|F1| = 10
+|F2| = 10

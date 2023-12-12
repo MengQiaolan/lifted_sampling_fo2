@@ -1,0 +1,6 @@
+#\forall X: (P1(X) )
+#&
+#\exists X: (E(X))
+\forall X: ( \exists Y : (R(X,Y)))
+
+domain = 4

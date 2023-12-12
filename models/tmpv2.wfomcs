@@ -1,0 +1,7 @@
+\forall X: (~R1(X,X))
+& \forall X: (\forall Y: (R1(X,Y) -> R1(Y,X)))
+# & \forall X: (\forall Y: (R1(X,Y) -> R2(X,Y)))
+& \forall X: (\forall Y: (R1(X,Y)| ~R1(X,Y))) # & \forall X: (\exists Y: (R1(X,Y))) 
+# & \forall X: (\forall Y: (R2(X,Y)| ~R2(X,Y)))
+
+V = 3

@@ -13,7 +13,7 @@ from logzero import logger
 from contexttimer import Timer
 from collections import defaultdict
 
-from sampling_fo2.context import WFOMSContext
+from sampling_fo2.context import WFOMSContext, WFOMSContextv2
 from sampling_fo2.context.existential_context import \
     BlockType, ExistentialContext, ExistentialTwoTable
 from sampling_fo2.fol.syntax import AtomicFormula, Const, a, b, \
@@ -29,15 +29,15 @@ from sampling_fo2.wfomc import get_config_weight_standard_faster, \
 
 
 class Sampler(object):
-    def __init__(self, context: WFOMSContext):
-        self.context: WFOMSContext = context
+    def __init__(self, context: WFOMSContextv2):
+        self.context: WFOMSContextv2 = context
         get_weight = self.context.get_weight
-
+        
         self.domain: list[Const] = list(self.context.domain)
         self.domain_size: int = len(self.domain)
         logger.debug('domain: %s', self.domain)
         self.cell_graph: CellGraph = CellGraph(
-            self.context.formula, get_weight
+            self.context.skolemized_qf_formula, get_weight
         )
         MultinomialCoefficients.setup(self.domain_size)
         self.configs, self.weights = self._get_config_weights(
@@ -46,7 +46,7 @@ class Sampler(object):
         if self.context.contain_existential_quantifier():
             # Precomputed weights for cell configs
             self.uni_cell_graph: CellGraph = CellGraph(
-                self.context.uni_formula, get_weight
+                self.context.universal_qf_formula, get_weight
             )
             # self.uni_cell_graph.show()
             self.configs, self.weights = self._adjust_config_weights(
@@ -100,8 +100,8 @@ class Sampler(object):
         cb_configs = []
         for cell in cells:
             config = []
-            for domain_pred, block_type in context.blockpred_to_blocktype.items():
-                if cell.is_positive(domain_pred):
+            for block_pred, block_type in context.blockpred_to_blocktype.items():
+                if cell.is_positive(block_pred):
                     config.append((
                         cell.drop_preds(prefixes=PREDS_FOR_EXISTENTIAL),
                         block_type
@@ -170,8 +170,12 @@ class Sampler(object):
         q = Rational(1, 1)
         while not ext_config.all_satisfied():
             selected_cell, selected_block = ext_config.select_cell_block_type()
+            print(selected_block)
+            # print(ext_config.cb_config.items())
             selected_idx = ext_config.reduce_element(
                 selected_cell, selected_block)
+            # print("-> ", ext_config.cb_config.items())
+            # print()
             logger.debug('select element: %s, cell: %s, block type: %s',
                          selected_idx, selected_cell, selected_block)
 
@@ -193,6 +197,12 @@ class Sampler(object):
             for etable_config in ext_config.iter_etable_config(
                 etable_weights
             ):
+                print("-"*100)
+                for k,v in etable_config.items():
+                    print(k)
+                    for k2,v2 in v.items():
+                        print(k2,v2)
+                #     break
                 cell_weight = self.cell_graph.get_cell_weight(selected_cell)
                 etable_config_per_cell = defaultdict(
                     lambda: defaultdict(lambda: 0)
@@ -205,7 +215,7 @@ class Sampler(object):
 
                 if not ext_config.satisfied(selected_block, overall_etable_config):
                     continue
-
+                print("@"*100)
                 coeff = Rational(1, 1)
                 for _, config in etable_config.items():
                     coeff *= Rational(MultinomialCoefficients.coef(
@@ -219,6 +229,9 @@ class Sampler(object):
                         )
 
                 reduced_cb_config = ext_config.reduce_cb_config(etable_config)
+                # print()
+                # print(reduced_cb_config)
+                # print(ext_config.cb_config.items())
                 reduced_weight = self.cb_weights[reduced_cb_config]
                 # print(q, total_weight_ebtype, utype_weight, coeff,
                 #       reduced_weight)
@@ -228,9 +241,13 @@ class Sampler(object):
                     q * total_weight_etable * cell_weight *
                     coeff * reduced_weight
                 )
+                # print(ext_config.cb_config.items())
+                # print("-"*100)
+                # print(w / total_weight)
                 # logger.debug(eb_config)
                 # logger.debug('%s %s', w, total_weight)
                 if random.random() < w / total_weight:
+                    print("@"*100)
                     logger.debug('selected etable config:\n%s', etable_config)
                     etable_indices = ext_config.sample_and_update(
                         etable_config)
@@ -486,7 +503,7 @@ if __name__ == '__main__':
 
     with Timer() as t:
         problem = parse_input(args.input)
-    context = WFOMSContext(problem)
+    context = WFOMSContextv2(problem)
     logger.info('Parse input: %ss', t)
 
     with Timer() as total_t:

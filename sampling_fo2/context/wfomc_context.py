@@ -9,6 +9,7 @@ from sampling_fo2.problems import WFOMCSProblem
 from sampling_fo2.utils import Rational
 from sampling_fo2.utils.third_typing import RingElement
 
+from symengine import Rational, var
 
 class WFOMCContext(object):
     """
@@ -21,6 +22,16 @@ class WFOMCContext(object):
         self.weights: dict[Pred, tuple[Rational, Rational]] = problem.weights
         self.cardinality_constraint: CardinalityConstraint = problem.cardinality_constraint
         self.repeat_factor = 1
+        
+        # self.sym1 = var('a1')
+        # self.sym2 = var('a2')
+        # self.syms = [self.sym1, self.sym2]
+        # if len(self.sentence.ext_formulas) == 0:
+        #     for pred in self.sentence.uni_formula.preds():
+        #         if pred.name == "R1":
+        #            self.weights[pred] = (self.sym1, 1)
+        #         if pred.name == "R2":
+        #            self.weights[pred] = (self.sym2, 1)
 
         logger.info('sentence: \n%s', self.sentence)
         logger.info('domain: \n%s', self.domain)

@@ -15,7 +15,7 @@ from contexttimer import Timer
 from sampling_fo2.utils import MultinomialCoefficients, multinomial, \
     multinomial_less_than, RingElement, Rational, round_rational
 from sampling_fo2.utils.polynomial import coeff_dict, create_vars, expand
-from sampling_fo2.cell_graph import CellGraph, Cell, OptimizedCellGraph, OptimizedCellGraphv2, OptimizedCellGraphv2_forSymCell
+from sampling_fo2.cell_graph import CellGraph, CellGraphv2, Cell, OptimizedCellGraph, OptimizedCellGraphv2, OptimizedCellGraphv2_forSymCell
 from sampling_fo2.context import WFOMCContext
 from sampling_fo2.parser import parse_input
 from sampling_fo2.problems import WFOMCSProblem
@@ -52,6 +52,41 @@ def get_config_weight_standard_faster(config: list[int],
                 continue
             n_j = Rational(n_j, 1)
             res *= edge_weights[i][j] ** (n_i * n_j)
+    return res
+
+def get_config_weight_standard_faster_2(config: list[int],
+                                      cell_weights: list[RingElement],
+                                      edge_weights: list[list[RingElement]]) \
+        -> RingElement:
+    res = Rational(1, 1)
+    bi = Rational(1, 1)
+    for i, n_i in enumerate(config):
+        if n_i == 0:
+            continue
+        n_i = Rational(n_i, 1)
+        res *= cell_weights[i] ** n_i
+        
+        tmp_bi = Rational(1, 1)
+        for j, n_j in enumerate(config):
+            if n_j == 0:
+                continue
+            if i == j:
+                n_j -= 1
+            n_j = Rational(n_j, 1)
+            tmp_bi *= edge_weights[i][j] ** (n_j)
+        
+        from symengine import var, expand
+        print(config, tmp_bi)
+        tmp_bi_2 = Rational(0, 1)
+        for degrees, coef in coeff_dict(expand(tmp_bi), [var('a1'), var('a2')]):
+            if degrees[0] == sum(config)-1 or degrees[1] == sum(config)-1:
+                print("delete ", coef)
+                continue
+            tmp_bi_2 += coef
+        print(tmp_bi_2)
+        bi *= (tmp_bi_2) ** n_i
+    # bi = math.sqrt(bi)
+    res *= Rational(bi, 1)
     return res
 
 
@@ -122,7 +157,7 @@ def faster_wfomc(opt_cell_graph: OptimizedCellGraphv2,
 def standard_wfomc(formula: QFFormula,
                    domain_size: int,
                    get_weight: Callable[[Pred], tuple[RingElement, RingElement]]) -> RingElement:
-    cell_graph = CellGraph(formula, get_weight)
+    cell_graph = CellGraphv2(formula, get_weight)
     # cell_graph.show()
     cells = cell_graph.get_cells()
     n_cells = len(cells)
@@ -131,19 +166,10 @@ def standard_wfomc(formula: QFFormula,
     res = Rational(0, 1)
     for partition in multinomial(n_cells, domain_size):
         coef = MultinomialCoefficients.coef(partition)
-        cell_config = dict(zip(cells, partition))
-        # logger.debug(
-        #     '=' * 15 + ' Compute WFOMC for the partition %s ' + '=' * 15,
-        #     dict(filter(lambda x: x[1] != 0, cell_config.items())
-        # ))
-       
-        # res = res + coef * get_config_weight_standard(
-        #     cell_graph, cell_config
-        # )
-        res = res + coef * get_config_weight_standard_faster(
+        res = res + coef * get_config_weight_standard_faster_2(
             partition, 
-            cell_graph.get_all_weights()[0], 
-            cell_graph.get_all_weights()[1])
+            cell_graph.get_all_weights_v2()[0], 
+            cell_graph.get_all_weights_v2()[1])
     return res
 
 
@@ -253,7 +279,6 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-
 if __name__ == '__main__':
     # import sys
     # sys.setrecursionlimit(int(1e6))
@@ -269,7 +294,7 @@ if __name__ == '__main__':
     with Timer() as t:
         problem = parse_input(args.input)
     context = WFOMCContext(problem)
-    logger.info('Parse input: %ss', t)
+    logger.info('Parse input: %s', t)
 
     res = wfomc(
         context, algo=args.algo

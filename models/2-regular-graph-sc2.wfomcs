@@ -2,4 +2,4 @@
 \forall X: (\forall Y: (E(X,Y) -> E(Y,X))) &
 \forall X: (\exists_{=2} Y: (E(X,Y)))
 
-V = 6
+V = 5
