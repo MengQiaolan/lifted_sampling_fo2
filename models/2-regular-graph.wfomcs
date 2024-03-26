@@ -16,12 +16,4 @@
 \forall X: (Z7(X) -> (\exists Y: (F3(X,Y)))) &
 ExactlyOne[Z1, Z2, Z3, Z4, Z5, Z6, Z7, Z8]
 
-<<<<<<< HEAD
-V = 10
-|E| = 20
-=======
 V = 6
-|E| = 12
-|Z5| = 2
-|Z4| = 4
->>>>>>> for combinatorics backup

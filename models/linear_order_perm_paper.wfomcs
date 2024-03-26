@@ -1,0 +1,13 @@
+\forall X: (~Perm(X,X))
+& \forall X: (\exists_{=1} Y: (Perm(X, Y)))
+& \forall Y: (\exists_{=1} X: (Perm(X, Y)))
+& \forall X: (\forall Y: (Pred(X,Y) -> Perm(X,Y)))
+& \forall X: (\forall Y: (Pred(X,Y) -> LEQ(X,Y)))
+
+& \forall X: (\forall Y: (Perm(X,Y) -> E(X,Y)))
+& \forall X: (\forall Y: (E(X,Y) -> E(Y,X)))
+& \forall X: (~E(X,X))
+& \forall X: (\forall Y: (Smoke(X) & E(X,Y) -> Smoke(Y)))
+
+domain = 8
+|Pred| = 7

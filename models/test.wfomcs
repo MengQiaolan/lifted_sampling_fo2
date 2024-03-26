@@ -1,0 +1,18 @@
+# \forall X: (\forall Y: ((R(X,Y) -> R(Y,X))))
+\forall X: (\forall Y: (A(X) | B(Y))) &
+\forall X: ( ~R(X,X) )
+
+& \forall X: (\forall Y: (  (A1(X) & (R(X,Y)|R(Y,X))) -> A1(Y) ))
+& \forall X: (\forall Y: (  (A2(X) & (R(X,Y)|R(Y,X))) -> A2(Y) ))
+& \forall X: (\forall Y: (  (A3(X) & (R(X,Y)|R(Y,X))) -> A3(Y) ))
+& \forall X: (\forall Y: (  (A4(X) & (R(X,Y)|R(Y,X))) -> A4(Y) ))
+& \forall X: (\forall Y: (  (A5(X) & (R(X,Y)|R(Y,X))) -> A5(Y) ))
+& \forall X: (\forall Y: (  (A6(X) & (R(X,Y)|R(Y,X))) -> A6(Y) ))
+
+& \forall X: ( A6(X) -> A5(X) )
+& \forall X: ( A5(X) -> A4(X) )
+& \forall X: ( A4(X) -> A3(X) )
+& \forall X: ( A3(X) -> A2(X) )
+& \forall X: ( A2(X) -> A1(X) )
+
+V = 5

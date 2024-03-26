@@ -1,0 +1,27 @@
+\forall X: (~Perm(X,X))
+& \forall X: (\exists_{=1} Y: (Perm(X, Y)))
+& \forall Y: (\exists_{=1} X: (Perm(X, Y)))
+& \forall X: (\forall Y: (Pred(X,Y) -> Perm(X,Y)))
+& \forall X: (\forall Y: (Pred(X,Y) -> LEQ(X,Y)))
+
+& \forall X: (~Perm2(X,X))
+& \forall X: (\exists_{=1} Y: (Perm2(X, Y)))
+& \forall Y: (\exists_{=1} X: (Perm2(X, Y)))
+& \forall X: (\forall Y: (Inv(X,Y) <-> (LEQ(Y,X) & Perm2(X,Y))))
+
+& \forall X: (Red(X) | Blue(X))
+& \forall X: (~Red(X) | ~Blue(X))
+& \forall X: (\forall Y: (Red(X) & Pred(X,Y) -> Blue(X,Y)))
+& \forall X: (\forall Y: (Blue(X) & Pred(X,Y) -> Red(X,Y)))
+
+& \forall X: (\forall Y: (Red(X) & Perm2(X,Y) -> Red(X,Y)))
+& \forall X: (\forall Y: (Blue(X) & Perm2(X,Y) -> Blue(X,Y)))
+
+& \forall X: (\forall Y: (Pred2(X,Y) -> Perm2(X,Y)))
+& \forall X: (\forall Y: (Pred2(X,Y) -> LEQ(X,Y)))
+
+
+domain = 3
+|Pred| = 2 # n-1
+|Pred2| = 1 # n-2
+|Inv| = 2

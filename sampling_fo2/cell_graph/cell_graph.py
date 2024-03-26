@@ -159,9 +159,9 @@ class CellGraph(object):
             cell_weights.append(self.get_cell_weight(cell_i))
             twotable_weight = []
             for j, cell_j in enumerate(self.cells):
-                if i > j:
-                    twotable_weight.append(Rational(1, 1))
-                else:
+                # if i > j:
+                #     twotable_weight.append(Rational(1, 1))
+                # else:
                     twotable_weight.append(self.get_two_table_weight(
                         (cell_i, cell_j)
                     ))
