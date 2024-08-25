@@ -1,0 +1,8 @@
+~friends(X,X).
+friends(X,Y) -> friends(Y,X).
+2 friends(X,Y) & smoke(X) & LEQ(Y,X) -> smoke(Y)
+2 friends(X,Y) & drink(X) & LEQ(Y,X) -> drink(Y)
+1 smoke(X) -> drink(X)
+1 drink(X) -> smoke(X)
+
+domain = 5  # the domain size $n$

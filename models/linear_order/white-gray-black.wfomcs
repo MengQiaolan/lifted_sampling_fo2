@@ -1,0 +1,5 @@
+ExactlyOne[White, Gray, Black]
+& \forall X: (\forall Y: (~(Black(X) & White(Y))))
+& \forall X: (LEQ(X, X))
+
+n = 4

@@ -25,7 +25,8 @@ class CellGraph(object):
     """
 
     def __init__(self, formula: QFFormula,
-                 get_weight: Callable[[Pred], Tuple[RingElement, RingElement]]):
+                 get_weight: Callable[[Pred], Tuple[RingElement, RingElement]],
+                 leq_pred: Pred = None):
         """
         Cell graph that handles cells (1-types) and the WMC between them
 
@@ -36,6 +37,7 @@ class CellGraph(object):
         self.formula: QFFormula = formula
         self.get_weight: Callable[[Pred],
                                   Tuple[RingElement, RingElement]] = get_weight
+        self.leq_pred: Pred = leq_pred
         self.preds: Tuple[Pred] = tuple(self.formula.preds())
         logger.debug('prednames: %s', self.preds)
 
@@ -50,6 +52,11 @@ class CellGraph(object):
         self.gnd_formula_cc: QFFormula = self._ground_on_tuple(
             self.formula, c
         )
+        if self.leq_pred is not None:
+            self.gnd_formula_cc &= self.leq_pred(c, c)
+            self.gnd_formula_ab = self.gnd_formula_ab & \
+                self.leq_pred(b, a) & \
+                (~self.leq_pred(a, b))
         logger.info('ground a b: %s', self.gnd_formula_ab)
         logger.info('ground c: %s', self.gnd_formula_cc)
 
@@ -150,9 +157,9 @@ class CellGraph(object):
             cell_weights.append(self.get_cell_weight(cell_i))
             twotable_weight = []
             for j, cell_j in enumerate(self.cells):
-                if i > j:
-                    twotable_weight.append(Rational(1, 1))
-                else:
+                # if i > j:
+                #     twotable_weight.append(Rational(1, 1))
+                # else:
                     twotable_weight.append(self.get_two_table_weight(
                         (cell_i, cell_j)
                     ))

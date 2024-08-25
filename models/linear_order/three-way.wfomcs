@@ -1,0 +1,5 @@
+\forall X: (~H(X) | ~T(X))
+& \forall X: (\forall Y: (H(Y) & LEQ(X,Y) -> H(X)))
+& \forall X: (\forall Y: (T(X) & LEQ(X,Y) -> T(Y)))
+
+domain = 3  # the domain size $n$

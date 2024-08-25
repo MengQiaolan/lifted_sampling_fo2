@@ -1,0 +1,18 @@
+\forall X: (Eq(X,X))
+& \forall X: (~R1(X,X) & ~R2(X,X) & ~R3(X,X))
+& \forall X: (\forall Y: (K(X) & K(Y) & ~Eq(X,Y) -> (R1(X,Y) | R2(X,Y) | R3(X,Y))))
+& \forall X: (\exists Y: (R1(X,Y)))
+& \forall X: (\exists Y: (R2(X,Y)))
+& \forall X: (\exists Y: (R3(X,Y)))
+& \forall X: (\forall Y: ((R1(X,Y) | R2(X,Y) | R3(X,Y)) & ~(K(X) & K(Y)) -> LEQ(Y,X)))
+& \forall X: (\forall Y: (K(X) & ~K(Y) -> LEQ(X,Y)))
+
+
+& \forall X: (\forall Y: (R1(X, Y) -> ~R2(X, Y)))
+& \forall X: (\forall Y: (R1(X, Y) -> ~R3(X, Y)))
+& \forall X: (\forall Y: (R2(X, Y) -> ~R3(X, Y)))
+
+
+domain = 4  # the domain size $n$
+|Eq| = 4  # should be $n$
+|K| = 4  # dont change this
